@@ -1,0 +1,40 @@
+name: Build APK
+
+on:
+  push:
+  workflow_dispatch:
+
+env:
+  APP_ID: com.docera.parwez
+  APP_NAME: Docera
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 9.3.1
+
+      - name: Unzip project
+        run: |
+          mkdir -p project
+          unzip -o ./*.zip -d project
+          DIR=$(dirname "$(find project -name settings.gradle.kts | head -n 1)")
+          echo "PROJECT_DIR=$DIR" >> "$GITHUB_ENV"
+
+      - name: Build debug APK
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: gradle assembleDebug -PappId="$APP_ID" -PappName="$APP_NAME" -PverCode=${{ github.run_number }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-apk
+          path: project/**/app/build/outputs/apk/debug/*.apk
